@@ -47,7 +47,7 @@ static char veritykeyid[VERITY_DEFAULT_KEY_ID_LENGTH];
 static char buildvariant[BUILD_VARIANT];
 
 static bool target_added;
-static bool verity_enabled = true;
+static bool verity_enabled = false;
 struct dentry *debug_dir;
 static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv);
 
@@ -576,44 +576,46 @@ static int verity_mode(void)
 static int verify_verity_signature(char *key_id,
 		struct android_metadata *metadata)
 {
-	key_ref_t key_ref;
-	struct key *key;
-	struct public_key_signature *pks = NULL;
-	int retval = -EINVAL;
+	return 0;
 
-	key_ref = keyring_search(make_key_ref(system_trusted_keyring, 1),
-		&key_type_asymmetric, key_id);
+// 	key_ref_t key_ref;
+// 	struct key *key;
+// 	struct public_key_signature *pks = NULL;
+// 	int retval = -EINVAL;
 
-	if (IS_ERR(key_ref)) {
-		DMERR("keyring: key not found");
-		return -ENOKEY;
-	}
+// 	key_ref = keyring_search(make_key_ref(system_trusted_keyring, 1),
+// 		&key_type_asymmetric, key_id);
 
-	key = key_ref_to_ptr(key_ref);
+// 	if (IS_ERR(key_ref)) {
+// 		DMERR("keyring: key not found");
+// 		return -ENOKEY;
+// 	}
 
-	pks = table_make_digest(HASH_ALGO_SHA256,
-			(const void *)metadata->verity_table,
-			le32_to_cpu(metadata->header->table_length));
+// 	key = key_ref_to_ptr(key_ref);
 
-	if (IS_ERR(pks)) {
-		DMERR("hashing failed");
-		goto error;
-	}
+// 	pks = table_make_digest(HASH_ALGO_SHA256,
+// 			(const void *)metadata->verity_table,
+// 			le32_to_cpu(metadata->header->table_length));
 
-	retval = table_extract_mpi_array(pks, &metadata->header->signature[0],
-				RSANUMBYTES);
-	if (retval < 0) {
-		DMERR("Error extracting mpi %d", retval);
-		goto error;
-	}
+// 	if (IS_ERR(pks)) {
+// 		DMERR("hashing failed");
+// 		goto error;
+// 	}
 
-	retval = verify_signature(key, pks);
-	mpi_free(pks->rsa.s);
-error:
-	kfree(pks);
-	key_put(key);
+// 	retval = table_extract_mpi_array(pks, &metadata->header->signature[0],
+// 				RSANUMBYTES);
+// 	if (retval < 0) {
+// 		DMERR("Error extracting mpi %d", retval);
+// 		goto error;
+// 	}
 
-	return retval;
+// 	retval = verify_signature(key, pks);
+// 	mpi_free(pks->rsa.s);
+// error:
+// 	kfree(pks);
+// 	key_put(key);
+
+// 	return retval;
 }
 
 static void handle_error(void)
