@@ -47,7 +47,7 @@ static char veritykeyid[VERITY_DEFAULT_KEY_ID_LENGTH];
 static char buildvariant[BUILD_VARIANT];
 
 static bool target_added;
-static bool verity_enabled = true;
+static bool verity_enabled = false;
 struct dentry *debug_dir;
 static int android_verity_ctr(struct dm_target *ti, unsigned argc, char **argv);
 
@@ -123,74 +123,74 @@ static inline bool is_unlocked(void)
 	return !strncmp(verifiedbootstate, unlocked, sizeof(unlocked));
 }
 
-static int table_extract_mpi_array(struct public_key_signature *pks,
-				const void *data, size_t len)
-{
-	MPI mpi = mpi_read_raw_data(data, len);
+// static int table_extract_mpi_array(struct public_key_signature *pks,
+// 				const void *data, size_t len)
+// {
+// 	MPI mpi = mpi_read_raw_data(data, len);
 
-	if (!mpi) {
-		DMERR("Error while allocating mpi array");
-		return -ENOMEM;
-	}
+// 	if (!mpi) {
+// 		DMERR("Error while allocating mpi array");
+// 		return -ENOMEM;
+// 	}
 
-	pks->mpi[0] = mpi;
-	pks->nr_mpi = 1;
-	return 0;
-}
+// 	pks->mpi[0] = mpi;
+// 	pks->nr_mpi = 1;
+// 	return 0;
+// }
 
-static struct public_key_signature *table_make_digest(
-						enum hash_algo hash,
-						const void *table,
-						unsigned long table_len)
-{
-	struct public_key_signature *pks = NULL;
-	struct crypto_shash *tfm;
-	struct shash_desc *desc;
-	size_t digest_size, desc_size;
-	int ret;
+// static struct public_key_signature *table_make_digest(
+// 						enum hash_algo hash,
+// 						const void *table,
+// 						unsigned long table_len)
+// {
+// 	struct public_key_signature *pks = NULL;
+// 	struct crypto_shash *tfm;
+// 	struct shash_desc *desc;
+// 	size_t digest_size, desc_size;
+// 	int ret;
 
-	/* Allocate the hashing algorithm we're going to need and find out how
-	 * big the hash operational data will be.
-	 */
-	tfm = crypto_alloc_shash(hash_algo_name[hash], 0, 0);
-	if (IS_ERR(tfm))
-		return ERR_CAST(tfm);
+// 	/* Allocate the hashing algorithm we're going to need and find out how
+// 	 * big the hash operational data will be.
+// 	 */
+// 	tfm = crypto_alloc_shash(hash_algo_name[hash], 0, 0);
+// 	if (IS_ERR(tfm))
+// 		return ERR_CAST(tfm);
 
-	desc_size = crypto_shash_descsize(tfm) + sizeof(*desc);
-	digest_size = crypto_shash_digestsize(tfm);
+// 	desc_size = crypto_shash_descsize(tfm) + sizeof(*desc);
+// 	digest_size = crypto_shash_digestsize(tfm);
 
-	/* We allocate the hash operational data storage on the end of out
-	 * context data and the digest output buffer on the end of that.
-	 */
-	ret = -ENOMEM;
-	pks = kzalloc(digest_size + sizeof(*pks) + desc_size, GFP_KERNEL);
-	if (!pks)
-		goto error;
+// 	 We allocate the hash operational data storage on the end of out
+// 	 * context data and the digest output buffer on the end of that.
+	 
+// 	ret = -ENOMEM;
+// 	pks = kzalloc(digest_size + sizeof(*pks) + desc_size, GFP_KERNEL);
+// 	if (!pks)
+// 		goto error;
 
-	pks->pkey_hash_algo = hash;
-	pks->digest = (u8 *)pks + sizeof(*pks) + desc_size;
-	pks->digest_size = digest_size;
+// 	pks->pkey_hash_algo = hash;
+// 	pks->digest = (u8 *)pks + sizeof(*pks) + desc_size;
+// 	pks->digest_size = digest_size;
 
-	desc = (struct shash_desc *)(pks + 1);
-	desc->tfm = tfm;
-	desc->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
+// 	desc = (struct shash_desc *)(pks + 1);
+// 	desc->tfm = tfm;
+// 	desc->flags = CRYPTO_TFM_REQ_MAY_SLEEP;
 
-	ret = crypto_shash_init(desc);
-	if (ret < 0)
-		goto error;
+// 	ret = crypto_shash_init(desc);
+// 	if (ret < 0)
+// 		goto error;
 
-	ret = crypto_shash_finup(desc, table, table_len, pks->digest);
-	if (ret < 0)
-		goto error;
+// 	ret = crypto_shash_finup(desc, table, table_len, pks->digest);
+// 	if (ret < 0)
+// 		goto error;
 
-	crypto_free_shash(tfm);
-	return pks;
+// 	crypto_free_shash(tfm);
+// 	return pks;
 
-error:
-	kfree(pks);
-	crypto_free_shash(tfm);
-	return ERR_PTR(ret);
-}
+// error:
+// 	kfree(pks);
+// 	crypto_free_shash(tfm);
+// 	return ERR_PTR(ret);
+// }
 
 static int read_block_dev(struct bio_read *payload, struct block_device *bdev,
 		sector_t offset, int length)
@@ -576,44 +576,46 @@ static int verity_mode(void)
 static int verify_verity_signature(char *key_id,
 		struct android_metadata *metadata)
 {
-	key_ref_t key_ref;
-	struct key *key;
-	struct public_key_signature *pks = NULL;
-	int retval = -EINVAL;
+	return 0;
 
-	key_ref = keyring_search(make_key_ref(system_trusted_keyring, 1),
-		&key_type_asymmetric, key_id);
+// 	key_ref_t key_ref;
+// 	struct key *key;
+// 	struct public_key_signature *pks = NULL;
+// 	int retval = -EINVAL;
 
-	if (IS_ERR(key_ref)) {
-		DMERR("keyring: key not found");
-		return -ENOKEY;
-	}
+// 	key_ref = keyring_search(make_key_ref(system_trusted_keyring, 1),
+// 		&key_type_asymmetric, key_id);
 
-	key = key_ref_to_ptr(key_ref);
+// 	if (IS_ERR(key_ref)) {
+// 		DMERR("keyring: key not found");
+// 		return -ENOKEY;
+// 	}
 
-	pks = table_make_digest(HASH_ALGO_SHA256,
-			(const void *)metadata->verity_table,
-			le32_to_cpu(metadata->header->table_length));
+// 	key = key_ref_to_ptr(key_ref);
 
-	if (IS_ERR(pks)) {
-		DMERR("hashing failed");
-		goto error;
-	}
+// 	pks = table_make_digest(HASH_ALGO_SHA256,
+// 			(const void *)metadata->verity_table,
+// 			le32_to_cpu(metadata->header->table_length));
 
-	retval = table_extract_mpi_array(pks, &metadata->header->signature[0],
-				RSANUMBYTES);
-	if (retval < 0) {
-		DMERR("Error extracting mpi %d", retval);
-		goto error;
-	}
+// 	if (IS_ERR(pks)) {
+// 		DMERR("hashing failed");
+// 		goto error;
+// 	}
 
-	retval = verify_signature(key, pks);
-	mpi_free(pks->rsa.s);
-error:
-	kfree(pks);
-	key_put(key);
+// 	retval = table_extract_mpi_array(pks, &metadata->header->signature[0],
+// 				RSANUMBYTES);
+// 	if (retval < 0) {
+// 		DMERR("Error extracting mpi %d", retval);
+// 		goto error;
+// 	}
 
-	return retval;
+// 	retval = verify_signature(key, pks);
+// 	mpi_free(pks->rsa.s);
+// error:
+// 	kfree(pks);
+// 	key_put(key);
+
+// 	return retval;
 }
 
 static void handle_error(void)
