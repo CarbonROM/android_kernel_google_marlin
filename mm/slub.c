@@ -34,7 +34,6 @@
 #include <linux/stacktrace.h>
 #include <linux/prefetch.h>
 #include <linux/memcontrol.h>
-#include <linux/random.h>
 
 #include <trace/events/kmem.h>
 
@@ -235,28 +234,20 @@ static inline void stat(const struct kmem_cache *s, enum stat_item si)
 
 static inline void *get_freepointer(struct kmem_cache *s, void *object)
 {
-	unsigned long freepointer_addr = (unsigned long)object + s->offset;
-	return (void *)(*(unsigned long *)freepointer_addr ^ s->random ^ freepointer_addr);
+	return *(void **)(object + s->offset);
 }
 
 static void prefetch_freepointer(const struct kmem_cache *s, void *object)
 {
-	unsigned long freepointer_addr = (unsigned long)object + s->offset;
-	if (object) {
-		void **freepointer_ptr = (void **)(*(unsigned long *)freepointer_addr ^ s->random ^ freepointer_addr);
-		prefetch(freepointer_ptr);
-	}
+	prefetch(object + s->offset);
 }
 
 static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 {
-	unsigned long __maybe_unused freepointer_addr;
 	void *p;
 
 #ifdef CONFIG_DEBUG_PAGEALLOC
-	freepointer_addr = (unsigned long)object + s->offset;
-	probe_kernel_read(&p, (void **)freepointer_addr, sizeof(p));
-	return (void *)((unsigned long)p ^ s->random ^ freepointer_addr);
+	probe_kernel_read(&p, (void **)(object + s->offset), sizeof(p));
 #else
 	p = get_freepointer(s, object);
 #endif
@@ -265,8 +256,7 @@ static inline void *get_freepointer_safe(struct kmem_cache *s, void *object)
 
 static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 {
-	unsigned long freepointer_addr = (unsigned long)object + s->offset;
-	*(void **)freepointer_addr = (void *)((unsigned long)fp ^ s->random ^ freepointer_addr);
+	*(void **)(object + s->offset) = fp;
 }
 
 /* Loop over all objects in a slab */
@@ -3173,7 +3163,6 @@ static int calculate_sizes(struct kmem_cache *s, int forced_order)
 static int kmem_cache_open(struct kmem_cache *s, unsigned long flags)
 {
 	s->flags = kmem_cache_flags(s->size, flags, s->name, s->ctor);
-	s->random = get_random_long();
 	s->reserved = 0;
 
 	if (need_reserve_slab_rcu && (s->flags & SLAB_DESTROY_BY_RCU))
